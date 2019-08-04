@@ -486,7 +486,7 @@
 			compatible = "android,firmware";
 			vbmeta {
 				compatible = "android,vbmeta";
-				parts = "vbmeta,boot,system,vendor,dtbo";
+				parts = "vbmeta,boot,system,vendor,dtbo,recovery";
 			};
 			fstab {
 				compatible = "android,fstab";
@@ -495,7 +495,7 @@
 					dev = "/dev/block/platform/soc/1d84000.ufshc/by-name/vendor";
 					type = "ext4";
 					mnt_flags = "ro,barrier=1,discard";
-					fsmgr_flags = "wait,slotselect,avb";
+					fsmgr_flags = "wait,avb";
 					status = "ok";
 				};
 			};
@@ -1203,8 +1203,8 @@
 		reg-names = "wdt-base";
 		interrupts = <GIC_SPI 0 IRQ_TYPE_NONE>,
 			     <GIC_SPI 1 IRQ_TYPE_NONE>;
-		qcom,bark-time = <11000>;
-		qcom,pet-time = <9360>;
+		qcom,bark-time = <20000>;
+		qcom,pet-time = <15000>;
 		qcom,ipi-ping;
 		qcom,wakeup-enable;
 		qcom,scandump-sizes = <0x10100 0x10100 0x10100 0x10100
@@ -2362,7 +2362,7 @@
 
 		lanes-per-direction = <1>;
 		dev-ref-clk-freq = <0>; /* 19.2 MHz */
-		spm-level = <5>;
+		spm-level = <3>;
 
 		clock-names =
 			"core_clk",
@@ -3336,133 +3336,6 @@
 	extcon = <&pm6150_pdphy>, <&pm6150_charger>, <&eud>;
 };
 
-&pm6150_vadc {
-	rf_pa0_therm {
-		reg = <ADC_AMUX_THM2_PU2>;
-		label = "rf_pa0_therm";
-		qcom,ratiometric;
-		qcom,hw-settle-time = <200>;
-		qcom,pre-scaling = <1 1>;
-	};
-
-	rf_pa1_therm {
-		reg = <ADC_AMUX_THM3_PU2>;
-		label = "rf_pa1_therm";
-		qcom,ratiometric;
-		qcom,hw-settle-time = <200>;
-		qcom,pre-scaling = <1 1>;
-	};
-
-	quiet_therm {
-		reg = <ADC_AMUX_THM4_PU2>;
-		label = "quiet_therm";
-		qcom,ratiometric;
-		qcom,hw-settle-time = <200>;
-		qcom,pre-scaling = <1 1>;
-	};
-};
-
-&pm6150_adc_tm {
-	io-channels = <&pm6150_vadc ADC_XO_THERM_PU2>,
-			<&pm6150_vadc ADC_AMUX_THM2_PU2>,
-			<&pm6150_vadc ADC_AMUX_THM3_PU2>,
-			<&pm6150_vadc ADC_AMUX_THM4_PU2>;
-
-	/* Channel nodes */
-	xo_therm {
-		reg = <ADC_XO_THERM_PU2>;
-		qcom,ratiometric;
-		qcom,hw-settle-time = <200>;
-	};
-
-	rf_pa0_therm {
-		reg = <ADC_AMUX_THM2_PU2>;
-		qcom,ratiometric;
-		qcom,hw-settle-time = <200>;
-	};
-
-	rf_pa1_therm {
-		reg = <ADC_AMUX_THM3_PU2>;
-		qcom,ratiometric;
-		qcom,hw-settle-time = <200>;
-	};
-
-	quiet_therm {
-		reg = <ADC_AMUX_THM4_PU2>;
-		qcom,ratiometric;
-		qcom,hw-settle-time = <200>;
-	};
-};
-
-&pm6150l_vadc {
-	pinctrl-names = "default";
-	pinctrl-0 = <&nvm_therm_default>;
-
-	conn_therm {
-		reg = <ADC_AMUX_THM1_PU2>;
-		label = "conn_therm";
-		qcom,ratiometric;
-		qcom,hw-settle-time = <200>;
-		qcom,pre-scaling = <1 1>;
-	};
-
-	smb_therm {
-		reg = <ADC_AMUX_THM2>;
-		label = "smb_therm";
-		qcom,hw-settle-time = <200>;
-		qcom,pre-scaling = <1 1>;
-	};
-
-	camera_ftherm {
-		reg = <ADC_AMUX_THM3_PU2>;
-		label = "camera_ftherm";
-		qcom,ratiometric;
-		qcom,hw-settle-time = <200>;
-		qcom,pre-scaling = <1 1>;
-	};
-
-	nvm_therm {
-		reg = <ADC_GPIO4_PU2>;
-		label = "nvm_therm";
-		qcom,ratiometric;
-		qcom,hw-settle-time = <200>;
-		qcom,pre-scaling = <1 1>;
-	};
-};
-
-&pm6150l_gpios {
-	nvm_therm {
-		nvm_therm_default: nvm_therm_default {
-			pins = "gpio10";
-			bias-high-impedance;
-		};
-	};
-};
-
-&pm6150l_adc_tm {
-	io-channels = <&pm6150l_vadc ADC_AMUX_THM1_PU2>,
-			<&pm6150l_vadc ADC_AMUX_THM3_PU2>,
-			<&pm6150l_vadc ADC_GPIO4_PU2>;
-
-	/* Channel nodes */
-	conn_therm {
-		reg = <ADC_AMUX_THM1_PU2>;
-		qcom,ratiometric;
-		qcom,hw-settle-time = <200>;
-	};
-
-	camera_ftherm {
-		reg = <ADC_AMUX_THM3_PU2>;
-		qcom,ratiometric;
-		qcom,hw-settle-time = <200>;
-	};
-
-	nvm_therm {
-		reg = <ADC_GPIO4_PU2>;
-		qcom,ratiometric;
-		qcom,hw-settle-time = <200>;
-	};
-};
 
 &msm_vidc0 {
 	qcom,cx-ipeak-data = <&cx_ipeak_lm 5>;
