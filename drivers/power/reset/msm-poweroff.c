@@ -46,7 +46,11 @@
 #define SCM_DLOAD_FULLDUMP		0X10
 #define SCM_EDLOAD_MODE			0X01
 #define SCM_DLOAD_CMD			0x10
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+#define SCM_DLOAD_MINIDUMP		0xC0
+#else
 #define SCM_DLOAD_MINIDUMP		0X20
+#endif
 #define SCM_DLOAD_BOTHDUMPS	(SCM_DLOAD_MINIDUMP | SCM_DLOAD_FULLDUMP)
 
 static int restart_mode;
@@ -63,7 +67,11 @@ static void scm_disable_sdi(void);
  * There is no API from TZ to re-enable the registers.
  * So the SDI cannot be re-enabled when it already by-passed.
  */
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+int download_mode = 1;
+#else
 static int download_mode = 1;
+#endif
 static struct kobject dload_kobj;
 
 #ifdef CONFIG_QCOM_DLOAD_MODE
@@ -74,7 +82,11 @@ static struct kobject dload_kobj;
 #endif
 
 static int in_panic;
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+static int dload_type = SCM_DLOAD_BOTHDUMPS;
+#else
 static int dload_type = SCM_DLOAD_FULLDUMP;
+#endif
 static void *dload_mode_addr;
 static bool dload_mode_enabled;
 static void *emergency_dload_mode_addr;
@@ -300,6 +312,60 @@ static void msm_restart_prepare(const char *cmd)
 		pr_info("Forcing a warm reset of the system\n");
 
 	/* Hard reset the PMIC unless memory contents must be maintained. */
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	if (force_warm_reboot || need_warm_reset || in_panic) {
+		pr_info("a warm reset of the system with in_panic %d or need_warm_reset %d\n", in_panic, need_warm_reset);
+		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
+	} else
+		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
+
+	if (in_panic) {
+		qpnp_pon_set_restart_reason(PON_RESTART_REASON_PANIC);
+	} else if (cmd != NULL) {
+		if (!strncmp(cmd, "bootloader", 10)) {
+			qpnp_pon_set_restart_reason(
+				PON_RESTART_REASON_BOOTLOADER);
+			__raw_writel(0x77665500, restart_reason);
+		} else if (!strncmp(cmd, "recovery", 8)) {
+			qpnp_pon_set_restart_reason(
+				PON_RESTART_REASON_RECOVERY);
+			__raw_writel(0x77665502, restart_reason);
+		} else if (!strcmp(cmd, "rtc")) {
+			qpnp_pon_set_restart_reason(
+				PON_RESTART_REASON_RTC);
+			__raw_writel(0x77665503, restart_reason);
+		} else if (!strcmp(cmd, "dm-verity device corrupted")) {
+			qpnp_pon_set_restart_reason(
+				PON_RESTART_REASON_DMVERITY_CORRUPTED);
+			__raw_writel(0x77665508, restart_reason);
+		} else if (!strcmp(cmd, "dm-verity enforcing")) {
+			qpnp_pon_set_restart_reason(
+				PON_RESTART_REASON_DMVERITY_ENFORCE);
+			__raw_writel(0x77665509, restart_reason);
+		} else if (!strcmp(cmd, "keys clear")) {
+			qpnp_pon_set_restart_reason(
+				PON_RESTART_REASON_KEYS_CLEAR);
+			__raw_writel(0x7766550a, restart_reason);
+		} else if (!strncmp(cmd, "oem-", 4)) {
+			unsigned long code;
+			int ret;
+
+			ret = kstrtoul(cmd + 4, 16, &code);
+			if (!ret)
+				__raw_writel(0x6f656d00 | (code & 0xff),
+					     restart_reason);
+		} else if (!strncmp(cmd, "edl", 3)) {
+			if (0)
+				enable_emergency_dload_mode();
+		} else {
+			qpnp_pon_set_restart_reason(PON_RESTART_REASON_NORMAL);
+			__raw_writel(0x77665501, restart_reason);
+		}
+	} else {
+		qpnp_pon_set_restart_reason(PON_RESTART_REASON_NORMAL);
+		__raw_writel(0x77665501, restart_reason);
+	}
+#else
 	if (force_warm_reboot || need_warm_reset)
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
 	else
@@ -344,6 +410,7 @@ static void msm_restart_prepare(const char *cmd)
 			__raw_writel(0x77665501, restart_reason);
 		}
 	}
+#endif
 
 	flush_cache_all();
 

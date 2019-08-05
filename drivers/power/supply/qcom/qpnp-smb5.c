@@ -232,7 +232,11 @@ struct smb5 {
 	struct smb_dt_props	dt;
 };
 
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+static int __debug_mask = PR_MISC | PR_PARALLEL | PR_OTG | PR_WLS | PR_OEM;
+#else
 static int __debug_mask;
+#endif
 module_param_named(
 	debug_mask, __debug_mask, int, 0600
 );
@@ -255,7 +259,11 @@ enum {
 };
 
 #define PMI632_MAX_ICL_UA	3000000
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+#define PM6150_MAX_FCC_UA	3500000
+#else
 #define PM6150_MAX_FCC_UA	3000000
+#endif
 static int smb5_chg_config_init(struct smb5 *chip)
 {
 	struct smb_charger *chg = &chip->chg;
@@ -376,6 +384,9 @@ static int smb5_configure_internal_pull(struct smb_charger *chg, int type,
 #define MICRO_P1A			100000
 #define MICRO_1PA			1000000
 #define MICRO_3PA			3000000
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+#define MICRO_1P8A_FOR_DCP		1800000
+#endif
 #define OTG_DEFAULT_DEGLITCH_TIME_MS	50
 #define DEFAULT_WD_BARK_TIME		64
 static int smb5_parse_dt(struct smb5 *chip)
@@ -405,11 +416,19 @@ static int smb5_parse_dt(struct smb5 *chip)
 	chg->sw_jeita_enabled = of_property_read_bool(node,
 				"qcom,sw-jeita-enable");
 
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	chg->qc_class_ab = of_property_read_bool(node,
+				"qcom,distinguish-qc-class-ab");
+#endif
 	chg->pd_not_supported = chg->pd_not_supported ||
 			of_property_read_bool(node, "qcom,usb-pd-disable");
 
 	chg->lpd_disabled = of_property_read_bool(node, "qcom,lpd-disable");
 
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	chg->dynamic_fv_enabled = of_property_read_bool(node,
+				"qcom,dynamic-fv-enable");
+#endif
 	rc = of_property_read_u32(node, "qcom,wd-bark-time-secs",
 					&chip->dt.wd_bark_time);
 	if (rc < 0 || chip->dt.wd_bark_time < MIN_WD_BARK_TIME)
@@ -456,6 +475,140 @@ static int smb5_parse_dt(struct smb5 *chip)
 		rc = of_property_read_u32(node, "qcom,chg-term-base-current-ma",
 				&chip->dt.term_current_thresh_lo_ma);
 
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	if (of_find_property(node, "qcom,thermal-mitigation-dcp", &byte_len)) {
+		chg->thermal_mitigation_dcp = devm_kzalloc(chg->dev, byte_len,
+			GFP_KERNEL);
+
+		if (chg->thermal_mitigation_dcp == NULL)
+			return -ENOMEM;
+
+		chg->thermal_levels = byte_len / sizeof(u32);
+		rc = of_property_read_u32_array(node,
+				"qcom,thermal-mitigation-dcp",
+				chg->thermal_mitigation_dcp,
+				chg->thermal_levels);
+		if (rc < 0) {
+			dev_err(chg->dev,
+				"Couldn't read threm limits rc = %d\n", rc);
+			return rc;
+		}
+	}
+
+	if (of_find_property(node, "qcom,thermal-mitigation-qc2", &byte_len)) {
+		chg->thermal_mitigation_qc2 = devm_kzalloc(chg->dev, byte_len,
+			GFP_KERNEL);
+
+		if (chg->thermal_mitigation_qc2 == NULL)
+			return -ENOMEM;
+
+		chg->thermal_levels = byte_len / sizeof(u32);
+		rc = of_property_read_u32_array(node,
+				"qcom,thermal-mitigation-qc2",
+				chg->thermal_mitigation_qc2,
+				chg->thermal_levels);
+		if (rc < 0) {
+			dev_err(chg->dev,
+				"Couldn't read threm limits rc = %d\n", rc);
+			return rc;
+		}
+	}
+
+	if (of_find_property(node, "qcom,thermal-mitigation-pd-base", &byte_len)) {
+		chg->thermal_mitigation_pd_base = devm_kzalloc(chg->dev, byte_len,
+				GFP_KERNEL);
+
+		if (chg->thermal_mitigation_pd_base == NULL)
+			return -ENOMEM;
+
+		chg->thermal_levels = byte_len / sizeof(u32);
+		rc = of_property_read_u32_array(node,
+				"qcom,thermal-mitigation-pd-base",
+				chg->thermal_mitigation_pd_base,
+				chg->thermal_levels);
+		if (rc < 0) {
+			dev_err(chg->dev,
+				"Couldn't read threm limits rc = %d\n", rc);
+			return rc;
+		}
+	}
+
+	if (of_find_property(node, "qcom,thermal-fcc-qc3-normal", &byte_len)) {
+		chg->thermal_fcc_qc3_normal = devm_kzalloc(chg->dev, byte_len,
+			GFP_KERNEL);
+
+		if (chg->thermal_fcc_qc3_normal == NULL)
+				return -ENOMEM;
+
+		chg->thermal_levels = byte_len / sizeof(u32);
+		rc = of_property_read_u32_array(node,
+				"qcom,thermal-fcc-qc3-normal",
+				chg->thermal_fcc_qc3_normal,
+				chg->thermal_levels);
+		if (rc < 0) {
+			dev_err(chg->dev,
+				"Couldn't read threm limits rc = %d\n", rc);
+			return rc;
+		}
+	}
+
+	if (of_find_property(node, "qcom,thermal-fcc-qc3-cp", &byte_len)) {
+		chg->thermal_fcc_qc3_cp = devm_kzalloc(chg->dev, byte_len,
+			GFP_KERNEL);
+
+		if (chg->thermal_fcc_qc3_cp == NULL)
+				return -ENOMEM;
+
+		chg->thermal_levels = byte_len / sizeof(u32);
+		rc = of_property_read_u32_array(node,
+				"qcom,thermal-fcc-qc3-cp",
+				chg->thermal_fcc_qc3_cp,
+				chg->thermal_levels);
+		if (rc < 0) {
+			dev_err(chg->dev,
+				"Couldn't read threm limits rc = %d\n", rc);
+			return rc;
+		}
+	}
+
+	if (of_find_property(node, "qcom,thermal-fcc-pps-cp", &byte_len)) {
+		chg->thermal_fcc_pps_cp = devm_kzalloc(chg->dev, byte_len,
+			GFP_KERNEL);
+
+		if (chg->thermal_fcc_pps_cp == NULL)
+				return -ENOMEM;
+
+		chg->thermal_levels = byte_len / sizeof(u32);
+		rc = of_property_read_u32_array(node,
+				"qcom,thermal-fcc-pps-cp",
+				chg->thermal_fcc_pps_cp,
+				chg->thermal_levels);
+		if (rc < 0) {
+			dev_err(chg->dev,
+				"Couldn't read threm limits rc = %d\n", rc);
+			return rc;
+		}
+	}
+
+	if (of_find_property(node, "qcom,thermal-mitigation-icl", &byte_len)) {
+		chg->thermal_mitigation_icl = devm_kzalloc(chg->dev, byte_len,
+			GFP_KERNEL);
+
+		if (chg->thermal_mitigation_icl == NULL)
+				return -ENOMEM;
+
+		chg->thermal_levels = byte_len / sizeof(u32);
+		rc = of_property_read_u32_array(node,
+				"qcom,thermal-mitigation-icl",
+				chg->thermal_mitigation_icl,
+				chg->thermal_levels);
+		if (rc < 0) {
+			dev_err(chg->dev,
+				"Couldn't read threm limits rc = %d\n", rc);
+			return rc;
+		}
+	}
+#else
 	if (of_find_property(node, "qcom,thermal-mitigation", &byte_len)) {
 		chg->thermal_mitigation = devm_kzalloc(chg->dev, byte_len,
 			GFP_KERNEL);
@@ -474,6 +627,7 @@ static int smb5_parse_dt(struct smb5 *chip)
 			return rc;
 		}
 	}
+#endif
 
 	rc = of_property_read_u32(node, "qcom,charger-temp-max",
 			&chg->charger_temp_max);
@@ -525,7 +679,11 @@ static int smb5_parse_dt(struct smb5 *chip)
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	chg->dcp_icl_ua = MICRO_1P8A_FOR_DCP;
+#else
 	chg->dcp_icl_ua = chip->dt.usb_icl_ua;
+#endif
 
 	chg->suspend_input_on_debug_batt = of_property_read_bool(node,
 					"qcom,suspend-input-on-debug-batt");
@@ -627,6 +785,9 @@ static enum power_supply_property smb5_usb_props[] = {
 	POWER_SUPPLY_PROP_CTM_CURRENT_MAX,
 	POWER_SUPPLY_PROP_HW_CURRENT_MAX,
 	POWER_SUPPLY_PROP_REAL_TYPE,
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	POWER_SUPPLY_PROP_HVDCP3_TYPE,
+#endif
 	POWER_SUPPLY_PROP_PD_VOLTAGE_MAX,
 	POWER_SUPPLY_PROP_PD_VOLTAGE_MIN,
 	POWER_SUPPLY_PROP_CONNECTOR_TYPE,
@@ -642,6 +803,9 @@ static enum power_supply_property smb5_usb_props[] = {
 	POWER_SUPPLY_PROP_HVDCP_OPTI_ALLOWED,
 	POWER_SUPPLY_PROP_QC_OPTI_DISABLE,
 	POWER_SUPPLY_PROP_THERM_ICL_LIMIT,
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	POWER_SUPPLY_PROP_TYPE_RECHECK,
+#endif
 };
 
 static int smb5_usb_get_prop(struct power_supply *psy,
@@ -700,6 +864,18 @@ static int smb5_usb_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_REAL_TYPE:
 		val->intval = chg->real_charger_type;
 		break;
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	case POWER_SUPPLY_PROP_HVDCP3_TYPE:
+		if (chg->real_charger_type != POWER_SUPPLY_TYPE_USB_HVDCP_3)
+			val->intval = HVDCP3_NONE; /* 0: none hvdcp3 insert */
+		else {
+			if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3)
+				val->intval = HVDCP3_CLASSA_18W; /* 18W hvdcp3 insert */
+			else
+				val->intval = HVDCP3_NONE;
+		}
+		break;
+#endif
 	case POWER_SUPPLY_PROP_TYPEC_MODE:
 		if (chg->connector_type == POWER_SUPPLY_CONNECTOR_MICRO_USB)
 			val->intval = POWER_SUPPLY_TYPEC_NONE;
@@ -813,6 +989,11 @@ static int smb5_usb_get_prop(struct power_supply *psy,
 		val->intval = get_client_vote(chg->usb_icl_votable,
 					THERMAL_THROTTLE_VOTER);
 		break;
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	case POWER_SUPPLY_PROP_TYPE_RECHECK:
+		rc = smblib_get_prop_type_recheck(chg, val);
+		break;
+#endif
 	default:
 		pr_err("get prop %d is not supported in usb\n", psp);
 		rc = -EINVAL;
@@ -896,6 +1077,11 @@ static int smb5_usb_set_prop(struct power_supply *psy,
 		else
 			rc = -EINVAL;
 		break;
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	case POWER_SUPPLY_PROP_TYPE_RECHECK:
+		rc = smblib_set_prop_type_recheck(chg, val);
+		break;
+#endif
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX_LIMIT:
 		smblib_set_prop_usb_voltage_max_limit(chg, val);
 		break;
@@ -939,10 +1125,17 @@ static int smb5_init_usb_psy(struct smb5 *chip)
 	struct power_supply_config usb_cfg = {};
 	struct smb_charger *chg = &chip->chg;
 
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	chg->usb_psy_desc = usb_psy_desc;
+#endif
 	usb_cfg.drv_data = chip;
 	usb_cfg.of_node = chg->dev->of_node;
 	chg->usb_psy = devm_power_supply_register(chg->dev,
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+						  &chg->usb_psy_desc,
+#else
 						  &usb_psy_desc,
+#endif
 						  &usb_cfg);
 	if (IS_ERR(chg->usb_psy)) {
 		pr_err("Couldn't register USB power supply\n");
@@ -1397,6 +1590,9 @@ static enum power_supply_property smb5_batt_props[] = {
 	POWER_SUPPLY_PROP_TECHNOLOGY,
 	POWER_SUPPLY_PROP_STEP_CHARGING_ENABLED,
 	POWER_SUPPLY_PROP_SW_JEITA_ENABLED,
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	POWER_SUPPLY_PROP_DYNAMIC_FV_ENABLED,
+#endif
 	POWER_SUPPLY_PROP_CHARGE_DONE,
 	POWER_SUPPLY_PROP_PARALLEL_DISABLE,
 	POWER_SUPPLY_PROP_SET_SHIP_MODE,
@@ -1460,13 +1656,22 @@ static int smb5_batt_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_SW_JEITA_ENABLED:
 		val->intval = chg->sw_jeita_enabled;
 		break;
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	case POWER_SUPPLY_PROP_DYNAMIC_FV_ENABLED:
+		val->intval = chg->dynamic_fv_enabled;
+		break;
+#endif
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		rc = smblib_get_prop_from_bms(chg,
 				POWER_SUPPLY_PROP_VOLTAGE_NOW, val);
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+		val->intval = get_effective_result_locked(chg->fv_votable);
+#else
 		val->intval = get_client_vote(chg->fv_votable,
 				BATT_PROFILE_VOTER);
+#endif
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_QNOVO:
 		val->intval = get_client_vote_locked(chg->fv_votable,
@@ -1475,8 +1680,12 @@ static int smb5_batt_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 		rc = smblib_get_prop_from_bms(chg,
 				POWER_SUPPLY_PROP_CURRENT_NOW, val);
-		if (!rc)
+
+#ifndef CONFIG_MACH_XIAOMI_DAVINCI
+		if (!rc)	
 			val->intval *= (-1);
+#else
+#endif
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_QNOVO:
 		val->intval = get_client_vote_locked(chg->fcc_votable,
@@ -1493,7 +1702,11 @@ static int smb5_batt_get_prop(struct power_supply *psy,
 		rc = smblib_get_prop_from_bms(chg, POWER_SUPPLY_PROP_TEMP, val);
 		break;
 	case POWER_SUPPLY_PROP_TECHNOLOGY:
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+		val->intval = POWER_SUPPLY_TECHNOLOGY_LIPO;
+#else
 		val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
+#endif
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_DONE:
 		rc = smblib_get_prop_batt_charge_done(chg, val);
@@ -1589,6 +1802,11 @@ static int smb5_batt_set_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_STEP_CHARGING_ENABLED:
 		chg->step_chg_enabled = !!val->intval;
 		break;
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	case POWER_SUPPLY_PROP_DYNAMIC_FV_ENABLED:
+		chg->dynamic_fv_enabled = !!val->intval;
+		break;
+#endif
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX:
 		chg->batt_profile_fcc_ua = val->intval;
 		vote(chg->fcc_votable, BATT_PROFILE_VOTER, true, val->intval);
@@ -1664,6 +1882,9 @@ static int smb5_batt_prop_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMITED:
 	case POWER_SUPPLY_PROP_STEP_CHARGING_ENABLED:
 	case POWER_SUPPLY_PROP_DIE_HEALTH:
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
+#endif
 		return 1;
 	default:
 		break;
@@ -2001,15 +2222,36 @@ static int smb5_configure_iterm_thresholds_adc(struct smb5 *chip)
 					max_limit_ma);
 		raw_hi_thresh = sign_extend32(raw_hi_thresh, 15);
 		buf = (u8 *)&raw_hi_thresh;
-		raw_hi_thresh = buf[1] | (buf[0] << 8);
-
-		rc = smblib_batch_write(chg, CHGR_ADC_ITERM_UP_THD_MSB_REG,
-				(u8 *)&raw_hi_thresh, 2);
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+		rc = smblib_write(chg, CHGR_ADC_ITERM_UP_THD_MSB_REG,
+					buf[1]);
 		if (rc < 0) {
-			dev_err(chg->dev, "Couldn't configure ITERM threshold HIGH rc=%d\n",
-					rc);
+			dev_err(chg->dev, "Couldn't set term MSB rc=%d\n",
+				rc);
 			return rc;
 		}
+#else
+		raw_hi_thresh = buf[1] | (buf[0] << 8);
+#endif
+
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+		rc = smblib_write(chg, CHGR_ADC_ITERM_UP_THD_LSB_REG,
+					buf[0]);
+#else
+		rc = smblib_batch_write(chg, CHGR_ADC_ITERM_UP_THD_MSB_REG,
+				(u8 *)&raw_hi_thresh, 2);
+#endif
+		if (rc < 0) {
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+			dev_err(chg->dev, "Couldn't set term LSB rc=%d\n",
+				rc);
+#else
+			dev_err(chg->dev, "Couldn't configure ITERM threshold HIGH rc=%d\n",
+					rc);
+#endif
+			return rc;
+		}
+
 	}
 
 	if (chip->dt.term_current_thresh_lo_ma) {
@@ -2293,8 +2535,11 @@ static int smb5_init_hw(struct smb5 *chip)
 	vote(chg->fcc_votable,
 		BATT_PROFILE_VOTER, chg->batt_profile_fcc_ua > 0,
 		chg->batt_profile_fcc_ua);
-	vote(chg->fv_votable,
-		BATT_PROFILE_VOTER, chg->batt_profile_fv_uv > 0,
+#ifndef CONFIG_MACH_XIAOMI_DAVINCI
+	vote(chg->fv_votable,	
+		BATT_PROFILE_VOTER, chg->batt_profile_fv_uv > 0,	
+#else
+#endif
 		chg->batt_profile_fv_uv);
 
 	/* Some h/w limit maximum supported ICL */
@@ -2305,6 +2550,38 @@ static int smb5_init_hw(struct smb5 *chip)
 	rc = smb5_init_dc_peripheral(chg);
 	if (rc < 0)
 		return rc;
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	// Operate the QC2.0 in 5V/9V mode i.e. Disable 12V
+	rc = smblib_masked_write(chg, HVDCP_PULSE_COUNT_MAX_REG,
+				 PULSE_COUNT_QC2P0_12V | PULSE_COUNT_QC2P0_9V,
+				 PULSE_COUNT_QC2P0_9V);
+	if (rc < 0) {
+		dev_err(chg->dev,
+			"Couldn't configure QC2.0 to 9V rc=%d\n", rc);
+		return rc;
+	}
+
+	if (!chg->sec_pl_present) {
+		// Operate the QC3.0 to limit vbus to 6.6v
+		rc = smblib_masked_write(chg, HVDCP_PULSE_COUNT_MAX_REG,
+					 PULSE_COUNT_QC3P0_mask,
+					 0x8);
+		if (rc < 0) {
+			dev_err(chg->dev,
+				"Couldn't configure QC3.0 to 6.6V rc=%d\n", rc);
+			return rc;
+		}
+	}
+#endif
+
+	/* Disable DC Input missing poller function */
+	rc = smblib_masked_write(chg, DCIN_LOAD_CFG_REG,
+					INPUT_MISS_POLL_EN_BIT, 0);
+	if (rc < 0) {
+		dev_err(chg->dev,
+			"Couldn't disable DC Input missing poller rc=%d\n", rc);
+		return rc;
+	}
 
 	/* Disable DC Input missing poller function */
 	rc = smblib_masked_write(chg, DCIN_LOAD_CFG_REG,
@@ -2563,8 +2840,23 @@ static int smb5_init_hw(struct smb5 *chip)
 		}
 	}
 
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	/*
+	 * 1. set 0x154a bit2 to 1 to fix huawei scp cable 3A for SDP issue
+	 * 2. set 0x154a bit3 to 0 to enable AICL for debug access mode cable
+	 */
+	rc = smblib_masked_write(chg, TYPE_C_DEBUG_ACC_SNK_CFG,
+			TYPEC_DEBUG_ACC_SNK_SEL_ICL | TYPEC_DEBUG_ACC_SNK_DIS_AICL,
+			TYPEC_DEBUG_ACC_SNK_SEL_ICL);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't configure TYPE_C_DEBUG_ACC_SNK_CFG rc=%d\n",
+				rc);
+		return rc;
+	}
+
 	return rc;
 }
+#endif
 
 static int smb5_post_init(struct smb5 *chip)
 {

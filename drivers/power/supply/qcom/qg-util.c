@@ -399,6 +399,12 @@ int qg_get_battery_current(struct qpnp_qg *chip, int *ibat_ua)
 	last_ibat = sign_extend32(last_ibat, 15);
 	*ibat_ua = qg_iraw_to_ua(chip, last_ibat);
 
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	if (*ibat_ua < 0)
+		chip->sdam_data[SDAM_IBAT_UA] = 0;
+	else
+		chip->sdam_data[SDAM_IBAT_UA] =  (chip->sdam_data[SDAM_IBAT_UA] != 0) ? (chip->sdam_data[SDAM_IBAT_UA] * 9 + *ibat_ua) / 10 :  *ibat_ua;
+#endif
 release:
 	/* release */
 	qg_masked_write(chip, chip->qg_base + QG_DATA_CTL2_REG,

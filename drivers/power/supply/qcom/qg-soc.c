@@ -31,12 +31,20 @@
 #define VBAT_LOW_HYST_UV			50000
 #define FULL_SOC				100
 
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+static int qg_delta_soc_interval_ms = 40000;
+#else
 static int qg_delta_soc_interval_ms = 20000;
+#endif
 module_param_named(
 	soc_interval_ms, qg_delta_soc_interval_ms, int, 0600
 );
 
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+static int qg_delta_soc_cold_interval_ms = 40000;
+#else
 static int qg_delta_soc_cold_interval_ms = 4000;
+#endif
 module_param_named(
 	soc_cold_interval_ms, qg_delta_soc_cold_interval_ms, int, 0600
 );
@@ -46,6 +54,10 @@ module_param_named(
 	maint_soc_update_ms, qg_maint_soc_update_ms, int, 0600
 );
 
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+#define HIG_SOC 		8000
+#define LOW_SOC 		1000
+#endif
 int qg_adjust_sys_soc(struct qpnp_qg *chip)
 {
 	int soc, vbat_uv, rc;
@@ -60,6 +72,20 @@ int qg_adjust_sys_soc(struct qpnp_qg *chip)
 			soc = 1;
 		else
 			soc = 0;
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+		} else if (chip->sys_soc == QG_MAX_SOC) {
+			soc = FULL_SOC;
+		} else {
+			if (chip->sys_soc > HIG_SOC)
+				soc = DIV_ROUND_CLOSEST(chip->sys_soc * 0.9 + chip->batt_soc * 0.1, 100);
+			else if (chip->sys_soc > LOW_SOC)
+				soc = DIV_ROUND_CLOSEST(chip->sys_soc * 0.8 + chip->batt_soc * 0.2, 100);
+			else
+				soc = DIV_ROUND_CLOSEST(chip->sys_soc * 0.9 + chip->batt_soc * 0.1, 100);
+
+			pr_err ("cc_soc = %d, batt_soc = %d, sys_soc = %d, soc = %d", chip->cc_soc, chip->batt_soc, chip->sys_soc, soc);
+		}
+#else
 	} else if (chip->sys_soc == QG_MAX_SOC) {
 		soc = FULL_SOC;
 	} else if (chip->sys_soc >= (QG_MAX_SOC - 100)) {
@@ -71,6 +97,7 @@ int qg_adjust_sys_soc(struct qpnp_qg *chip)
 	} else {
 		soc = DIV_ROUND_CLOSEST(chip->sys_soc, 100);
 	}
+#endif
 
 	qg_dbg(chip, QG_DEBUG_SOC, "last_adj_sys_soc=%d  adj_sys_soc=%d\n",
 					chip->last_adj_ssoc, soc);
@@ -176,16 +203,30 @@ static bool maint_soc_timeout(struct qpnp_qg *chip)
 
 static void update_msoc(struct qpnp_qg *chip)
 {
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	int rc = 0, sdam_soc, batt_temp = 0, batt_cur = 0, batt_soc_32bit = 0;
+#else
 	int rc = 0, sdam_soc, batt_temp = 0,  batt_soc_32bit = 0;
+#endif
 	bool input_present = is_input_present(chip);
 
+	rc = qg_get_battery_current(chip, &batt_cur);
+	if (rc < 0) {
+		pr_err("Failed to read BATT_CUR rc=%d\n", rc);
+	}
 	if (chip->catch_up_soc > chip->msoc) {
 		/* SOC increased */
 		if (input_present) /* Increment if input is present */
 			chip->msoc += chip->dt.delta_soc;
 	} else if (chip->catch_up_soc < chip->msoc) {
 		/* SOC dropped */
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+		if (batt_cur > 0) {
+			chip->msoc -= chip->dt.delta_soc;
+		}
+#else
 		chip->msoc -= chip->dt.delta_soc;
+#endif
 	}
 	chip->msoc = CAP(0, 100, chip->msoc);
 

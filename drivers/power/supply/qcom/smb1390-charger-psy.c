@@ -771,6 +771,9 @@ static enum power_supply_property smb1390_charge_pump_props[] = {
 	POWER_SUPPLY_PROP_CP_TOGGLE_SWITCHER,
 	POWER_SUPPLY_PROP_CP_IRQ_STATUS,
 	POWER_SUPPLY_PROP_CP_ILIM,
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	POWER_SUPPLY_PROP_MODEL_NAME,
+#endif
 	POWER_SUPPLY_PROP_CHIP_VERSION,
 	POWER_SUPPLY_PROP_PARALLEL_OUTPUT_MODE,
 	POWER_SUPPLY_PROP_MIN_ICL,
@@ -795,6 +798,15 @@ static int smb1390_get_prop(struct power_supply *psy,
 		if (!rc)
 			val->intval = status;
 		break;
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	case POWER_SUPPLY_PROP_MODEL_NAME:
+		rc = smb1390_read(chip, CORE_STATUS1_REG, &status);
+		if (rc < 0)
+			val->strval = "unknown";
+		else
+			val->strval = "smb1390";
+		break;
+#endif
 	case POWER_SUPPLY_PROP_CP_ENABLE:
 		rc = smb1390_get_cp_en_status(chip, SMB_PIN_EN, &enable);
 		if (!rc)

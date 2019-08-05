@@ -160,6 +160,11 @@ static ssize_t power_supply_show_property(struct device *dev,
 
 	if (off == POWER_SUPPLY_PROP_CHARGE_COUNTER_EXT)
 		return sprintf(buf, "%lld\n", value.int64val);
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	else if (off == POWER_SUPPLY_PROP_TYPE_RECHECK)
+		return scnprintf(buf, PAGE_SIZE, "0x%x\n",
+				value.intval);
+#endif
 	else
 		return sprintf(buf, "%d\n", value.intval);
 }
@@ -291,6 +296,9 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(charge_enabled),
 	POWER_SUPPLY_ATTR(set_ship_mode),
 	POWER_SUPPLY_ATTR(real_type),
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	POWER_SUPPLY_ATTR(hvdcp3_type),
+#endif
 	POWER_SUPPLY_ATTR(charge_now_raw),
 	POWER_SUPPLY_ATTR(charge_now_error),
 	POWER_SUPPLY_ATTR(capacity_raw),
@@ -365,6 +373,9 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(cc_step),
 	POWER_SUPPLY_ATTR(cc_step_sel),
 	POWER_SUPPLY_ATTR(sw_jeita_enabled),
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	POWER_SUPPLY_ATTR(dynamic_fv_enabled),
+#endif
 	POWER_SUPPLY_ATTR(pd_voltage_max),
 	POWER_SUPPLY_ATTR(pd_voltage_min),
 	POWER_SUPPLY_ATTR(sdp_current_max),
@@ -396,6 +407,9 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(therm_icl_limit),
 	POWER_SUPPLY_ATTR(voltage_max_limit),
 	POWER_SUPPLY_ATTR(dc_reset),
+#ifdef CONFIG_MACH_XIAOMI_DAVINCI
+	POWER_SUPPLY_ATTR(type_recheck),
+#endif
 	POWER_SUPPLY_ATTR(real_capacity),
 	/* Charge pump properties */
 	POWER_SUPPLY_ATTR(cp_status1),
