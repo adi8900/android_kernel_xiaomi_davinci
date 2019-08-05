@@ -44,8 +44,10 @@
 #define HFI_REG_QDSS_IOVA                       0x6C
 #define HFI_REG_SFR_PTR                         0x68
 #define HFI_REG_QDSS_IOVA_SIZE                  0x70
+#ifndef CONFIG_MACH_XIAOMI_DAVINCI
 #define HFI_REG_IO_REGION_IOVA                  0x74
 #define HFI_REG_IO_REGION_SIZE                  0x78
+#endif
 
 /* end of ICP CSR registers */
 

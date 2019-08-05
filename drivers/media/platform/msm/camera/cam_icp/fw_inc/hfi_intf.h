@@ -38,7 +38,9 @@ struct hfi_mem {
  * @sfr_buf: buffer for subsystem failure reason[SFR]
  * @sec_heap: secondary heap hfi memory for firmware
  * @qdss: qdss mapped memory for fw
+#ifndef CONFIG_MACH_XIAOMI_DAVINCI
  * @io_mem: io memory info
+#endif
  * @icp_base: icp base address
  */
 struct hfi_mem_info {
@@ -50,7 +52,9 @@ struct hfi_mem_info {
 	struct hfi_mem sec_heap;
 	struct hfi_mem shmem;
 	struct hfi_mem qdss;
+#ifndef CONFIG_MACH_XIAOMI_DAVINCI
 	struct hfi_mem io_mem;
+#endif
 	void __iomem *icp_base;
 };
 

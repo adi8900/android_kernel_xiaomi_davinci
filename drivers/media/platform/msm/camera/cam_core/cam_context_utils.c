@@ -262,8 +262,9 @@ int32_t cam_context_release_dev_to_hw(struct cam_context *ctx,
 	ctx->session_hdl = -1;
 	ctx->dev_hdl = -1;
 	ctx->link_hdl = -1;
+#ifndef CONFIG_MACH_XIAOMI_DAVINCI
 	ctx->last_flush_req = 0;
-
+#endif
 	return 0;
 }
 
