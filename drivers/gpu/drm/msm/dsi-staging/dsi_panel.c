@@ -625,6 +625,9 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	if (panel->fod_hbm_status)
 		return 0;
 
+	if (panel->elvss_dimming_status)
+		return 0;
+
 	dsi = &panel->mipi_device;
 
 	if (panel->bl_config.dcs_type_ss_ea || panel->bl_config.dcs_type_ss_eb)
@@ -1640,11 +1643,14 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"ROI not parsed from DTSI, generated dynamically",
 	"qcom,mdss-dsi-timing-switch-command",
 	"qcom,mdss-dsi-post-mode-switch-on-command",
+	"qcom,mdss-dsi-dispparam-elvss-dimming-offset-command",
+	"qcom,mdss-dsi-dispparam-elvss-dimming-read-command",
 	"qcom,mdss-dsi-qsync-on-commands",
 	"qcom,mdss-dsi-qsync-off-commands",
 	"qcom,mdss-dsi-doze-hbm-command",
 	"qcom,mdss-dsi-doze-lbm-command",
 	"qcom,mdss-dsi-dispparam-dimmingoff-command",
+	"qcom,mdss-dsi-dispparam-elvss-dimming-off-command",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -1669,11 +1675,14 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"ROI not parsed from DTSI, generated dynamically",
 	"qcom,mdss-dsi-timing-switch-command-state",
 	"qcom,mdss-dsi-post-mode-switch-on-command-state",
+	"qcom,mdss-dsi-dispparam-elvss-dimming-offset-command-state",
+	"qcom,mdss-dsi-dispparam-elvss-dimming-read-command-state",
 	"qcom,mdss-dsi-qsync-on-commands-state",
 	"qcom,mdss-dsi-qsync-off-commands-state",
 	"qcom,mdss-dsi-doze-hbm-command-state",
 	"qcom,mdss-dsi-doze-lbm-command-state",
 	"qcom,mdss-dsi-dispparam-dimmingoff-command-state",
+	"qcom,mdss-dsi-dispparam-elvss-dimming-off-command-state",
 };
 
 static int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -2917,6 +2926,75 @@ static void dsi_panel_esd_config_deinit(struct drm_panel_esd_config *esd_config)
 	kfree(esd_config->status_cmd.cmds);
 }
 
+int dsi_panel_parse_elvss_dimming_read_configs(struct dsi_panel *panel)
+{
+	int rc = 0;
+	struct dsi_read_config *elvss_dimming_cmds;
+	struct dsi_parser_utils *utils = &panel->utils;
+
+	if (!panel) {
+		pr_err("Invalid Params\n");
+		return -EINVAL;
+	}
+
+	elvss_dimming_cmds = &panel->elvss_dimming_cmds;
+	if (!elvss_dimming_cmds)
+		return -EINVAL;
+
+	dsi_panel_parse_cmd_sets_sub(&panel->elvss_dimming_offset,
+				DSI_CMD_SET_ELVSS_DIMMING_OFFSET, utils);
+	if (!panel->elvss_dimming_offset.count) {
+		pr_err("elvss dimming offset command parsing failed\n");
+		return -EINVAL;
+	}
+
+	dsi_panel_parse_cmd_sets_sub(&elvss_dimming_cmds->read_cmd,
+				DSI_CMD_SET_ELVSS_DIMMING_READ, utils);
+	if (!elvss_dimming_cmds->read_cmd.count) {
+		pr_err("elvss dimming command parsing failed\n");
+		return -EINVAL;
+	}
+
+	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-panel-elvss-dimming-read-length",
+					&(elvss_dimming_cmds->cmds_rlen));
+	if (rc) {
+		pr_err("failed to parse elvss dimming read length, rc=%d\n", rc);
+		return -EINVAL;
+	}
+
+	panel->elvss_dimming_status = true;
+
+	return 0;
+}
+
+static int dsi_panel_parse_elvss_dimming_config(struct dsi_panel *panel)
+{
+	int rc = 0;
+	struct dsi_parser_utils *utils = &panel->utils;
+
+	if (!panel) {
+		pr_err("Invalid Params\n");
+		return -EINVAL;
+	}
+
+	panel->elvss_dimming_status = utils->read_bool(utils->data,
+		"qcom,elvss_dimming_status");
+
+	if (!panel->elvss_dimming_status)
+		return 0;
+
+	rc = dsi_panel_parse_elvss_dimming_read_configs(panel);
+	if (rc) {
+		pr_err("failed to parse esd reg read mode params, rc=%d\n", rc);
+		panel->elvss_dimming_status = false;
+		return -EINVAL;;
+	}
+
+	pr_info("elvss dimming check enable\n");
+
+	return 0;
+}
+
 int dsi_panel_parse_esd_reg_read_configs(struct dsi_panel *panel)
 {
 	struct drm_panel_esd_config *esd_config;
@@ -3138,8 +3216,11 @@ static int dsi_panel_parse_mi_config(struct dsi_panel *panel,
 		pr_info("doze backlight threshold %d \n", panel->doze_backlight_threshold);
 	}
 
+	dsi_panel_parse_elvss_dimming_config(panel);
+
 	panel->doze_state = false;
 	panel->fod_hbm_status = false;
+	panel->elvss_dimming_status = false;
 
 	return rc;
 }
@@ -4095,6 +4176,7 @@ int dsi_panel_disable(struct dsi_panel *panel)
 	}
 	panel->panel_initialized = false;
 	panel->fod_hbm_status = false;
+	panel->elvss_dimming_status = false;
 
 	mutex_unlock(&panel->panel_lock);
 	return rc;

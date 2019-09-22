@@ -211,6 +211,9 @@ struct dsi_panel {
 
 	bool doze_state;
 	bool fod_hbm_status;
+	bool elvss_dimming_status;
+	struct dsi_read_config elvss_dimming_cmds;
+	struct dsi_panel_cmd_set elvss_dimming_offset;
 
 	u32 doze_backlight_threshold;
 };

@@ -4924,8 +4924,66 @@ static struct attribute *fod_hbm_fs_attrs[] = {
 	&dev_attr_fod_hbm.attr,
 	NULL,
 };
+
 static struct attribute_group fod_hbm_fs_attrs_group = {
 	.attrs = fod_hbm_fs_attrs,
+};
+
+static ssize_t sysfs_elvss_dimming_read(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct dsi_display *display;
+	struct dsi_panel *panel;
+	int rc = 0;
+
+	display = dev_get_drvdata(dev);
+	if (!display) {
+		pr_err("Invalid display\n");
+		return -EINVAL;
+	}
+
+	panel = display->panel;
+
+	mutex_lock(&panel->panel_lock);
+	rc = snprintf(buf, PAGE_SIZE, "%d\n", panel->elvss_dimming_status);
+	mutex_unlock(&panel->panel_lock);
+
+	return rc;
+}
+
+static ssize_t sysfs_elvss_dimming_write(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct dsi_display *display;
+	struct dsi_panel *panel;
+	int elvss_dimming_status;
+	int rc = 0;
+
+	display = dev_get_drvdata(dev);
+	if (!display) {
+		pr_err("Invalid display\n");
+		return -EINVAL;
+	}
+
+	panel = display->panel;
+
+	mutex_lock(&panel->panel_lock);
+	dsi_panel_set_elvss_dimming_backlight(panel, !!elvss_dimming_status);
+	mutex_unlock(&panel->panel_lock);
+
+	return count;
+}
+
+static DEVICE_ATTR(elvss_dimming, 0644,
+			sysfs_elvss_dimming_read,
+			sysfs_elvss_dimming_write);
+
+static struct attribute *elvss_dimming_fs_attrs[] = {
+	&dev_attr_elvss_dimming.attr,
+	NULL,
+};
+static struct attribute_group elvss_dimming_fs_attrs_group = {
+	.attrs = elvss_dimming_fs_attrs,
 };
 
 static int dsi_display_sysfs_init(struct dsi_display *display)
@@ -4937,6 +4995,11 @@ static int dsi_display_sysfs_init(struct dsi_display *display)
 			&fod_hbm_fs_attrs_group);
 	if (rc)
 		pr_err("failed to create fod hbm device attributes");
+
+	rc = sysfs_create_group(&dev->kobj,
+			&elvss_dimming_fs_attrs_group);
+	if (rc)
+		pr_err("failed to create elvss dimming device attributes");
 
 	if (display->panel->panel_mode == DSI_OP_CMD_MODE)
 		rc = sysfs_create_group(&dev->kobj,
@@ -7347,6 +7410,15 @@ int dsi_display_enable(struct dsi_display *display)
 
 		display->panel->panel_initialized = true;
 		pr_debug("cont splash enabled, display enable not required\n");
+		if (panel->elvss_dimming_status true) {
+			rc = dsi_display_write_panel(display, &panel->elvss_dimming_offset);
+			if (rc)
+				return 0;
+			rc = dsi_display_read_panel(panel, &panel->elvss_dimming_cmds);
+			if (rc <= 0)
+				return 0;
+			pr_info("elvss dimming read result %x\n", panel->elvss_dimming_cmds.rbuf[0]);
+		}
 		return 0;
 	}
 
