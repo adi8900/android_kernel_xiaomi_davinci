@@ -143,6 +143,15 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 
+		pm6150l_pwm: qcom,pwms@bc00 {
+			status = "disabled";
+			compatible = "qcom,pwm-lpg";
+			reg = <0xbc00 0x200>;
+			reg-names = "lpg-base";
+			qcom,num-lpg-channels = <2>;
+			#pwm-cells = <2>;
+		};
+
 		pm6150l_lcdb: qcom,lcdb@ec00 {
 			compatible = "qcom,qpnp-lcdb-regulator";
 			#address-cells = <1>;
@@ -382,17 +391,6 @@
 				qcom,ramp-pattern-repeat;
 			};
 		};
-
-		/* Added by qudao1@xiaomi.com */
-		pm6150l_pwm: qcom,pwms@bc00 {
-			compatible = "qcom,pwm-lpg";
-			reg = <0xbc00 0x200>;
-			reg-names = "lpg-base";
-			#pwm-cells = <2>;
-			qcom,num-lpg-channels = <2>;
-			status = "disabled";
-		};
-		/* End of Added by qudao1@xiaomi.com */
 
 		pm6150l_rgb_led: qcom,leds@d000 {
 			compatible = "qcom,tri-led";
