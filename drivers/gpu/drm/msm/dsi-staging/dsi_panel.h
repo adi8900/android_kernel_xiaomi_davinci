@@ -168,6 +168,14 @@ struct drm_panel_esd_config {
 	u32 groups;
 };
 
+struct dsi_read_config {
+	bool enabled;
+	struct dsi_panel_cmd_set read_cmd;
+	u32 cmds_rlen;
+	u32 valid_bits;
+	u8 rbuf[64];
+};
+
 struct dsi_panel {
 	const char *name;
 	const char *type;
@@ -209,6 +217,8 @@ struct dsi_panel {
 	bool panel_initialized;
 	bool te_using_watchdog_timer;
 	u32 qsync_min_fps;
+
+	bool dispparam_enabled;
 
 	char dsc_pps_cmd[DSI_CMD_PPS_SIZE];
 	enum dsi_dms_mode dms_mode;
