@@ -291,6 +291,27 @@ static ssize_t disp_param_store(struct device *device,
 	return count;
 }
 
+
+extern ssize_t mipi_reg_write(char *buf, size_t count);
+extern ssize_t mipi_reg_read(char *buf);
+
+static ssize_t mipi_reg_show(struct device *device,
+			    struct device_attribute *attr,
+			   char *buf)
+{
+	return mipi_reg_read(buf);
+}
+
+static ssize_t mipi_reg_store(struct device *device,
+			   struct device_attribute *attr,
+			   const char *buf, size_t count)
+{
+	int rc = 0;
+
+	rc = mipi_reg_write((char *)buf, count);
+	return rc;
+}
+
 static ssize_t hbm_status_show(struct device *device,
 			   struct device_attribute *attr,
 			   char *buf)
@@ -308,6 +329,7 @@ static DEVICE_ATTR_RO(modes);
 static DEVICE_ATTR_RO(panel_info);
 static DEVICE_ATTR_WO(disp_param);
 static DEVICE_ATTR_RO(hbm_status);
+static DEVICE_ATTR_RW(mipi_reg);
 
 static struct attribute *connector_dev_attrs[] = {
 	&dev_attr_status.attr,
@@ -317,6 +339,7 @@ static struct attribute *connector_dev_attrs[] = {
 	&dev_attr_panel_info.attr,
 	&dev_attr_disp_param.attr,
 	&dev_attr_hbm_status.attr,
+	&dev_attr_mipi_reg.attr,
 	NULL
 };
 
