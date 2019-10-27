@@ -3426,31 +3426,26 @@ irqreturn_t cam_ife_csid_irq(int irq_num, void *data)
 			CAM_ERR_RATE_LIMIT(CAM_ISP, "CSID:%d lane 0 over flow",
 				 csid_hw->hw_intf->hw_idx);
 			fatal_err_detected = true;
-			goto handle_fatal_error;
 		}
 		if (irq_status_rx & CSID_CSI2_RX_ERROR_LANE1_FIFO_OVERFLOW) {
 			CAM_ERR_RATE_LIMIT(CAM_ISP, "CSID:%d lane 1 over flow",
 				 csid_hw->hw_intf->hw_idx);
 			fatal_err_detected = true;
-			goto handle_fatal_error;
 		}
 		if (irq_status_rx & CSID_CSI2_RX_ERROR_LANE2_FIFO_OVERFLOW) {
 			CAM_ERR_RATE_LIMIT(CAM_ISP, "CSID:%d lane 2 over flow",
 				 csid_hw->hw_intf->hw_idx);
 			fatal_err_detected = true;
-			goto handle_fatal_error;
 		}
 		if (irq_status_rx & CSID_CSI2_RX_ERROR_LANE3_FIFO_OVERFLOW) {
 			CAM_ERR_RATE_LIMIT(CAM_ISP, "CSID:%d lane 3 over flow",
 				 csid_hw->hw_intf->hw_idx);
 			fatal_err_detected = true;
-			goto handle_fatal_error;
 		}
 		if (irq_status_rx & CSID_CSI2_RX_ERROR_TG_FIFO_OVERFLOW) {
 			CAM_ERR_RATE_LIMIT(CAM_ISP, "CSID:%d TG OVER FLOW",
 				 csid_hw->hw_intf->hw_idx);
 			fatal_err_detected = true;
-			goto handle_fatal_error;
 		}
 		if (irq_status_rx & CSID_CSI2_RX_ERROR_CPHY_EOT_RECEPTION) {
 			CAM_ERR_RATE_LIMIT(CAM_ISP,
