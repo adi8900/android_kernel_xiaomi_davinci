@@ -48,6 +48,11 @@
 
 #define CAM_HYP        (1 << 26)
 #define CAM_IR_LED     (1 << 27)
+
+/* Added by qudao1@xiaomi.com */
+#define CAM_XIAOMI       (1 << 31)
+/* End of Added by qudao1@xiaomi.com */
+
 #define STR_BUFFER_MAX_LENGTH  1024
 
 /*
